@@ -58,7 +58,7 @@
   function getMessage() {
     if (!form) return '';
     const data = new FormData(form);
-    return `Новая заявка с сайта ALLIAM\n\nИмя: ${data.get('name') || ''}\nКонтакт: ${data.get('contact') || ''}\nТема: ${data.get('topic') || ''}\n\nСитуация:\n${data.get('message') || ''}`;
+    return `Новая заявка с сайта ALLIAM\n\nИмя: ${data.get('name') || ''}\nКонтакт: ${data.get('contact') || ''}\nТема: ${data.get('topic') || ''}\n\nСитуация:\n${data.get('message') || ''}` + (window.ALLIAM_EXPERIENCE?.getSummary?.() || '');
   }
   async function copyText() {
     const msg = getMessage(); if (!msg) return;
@@ -198,6 +198,13 @@
       setStatus('Завершите проверку безопасности перед отправкой.', 'error'); return;
     }
     const data = Object.fromEntries(new FormData(form).entries());
+    try {
+      const extra = await window.ALLIAM_EXPERIENCE?.beforeSubmit?.();
+      if (extra && typeof extra === 'object') Object.assign(data, extra);
+    } catch (err) {
+      setStatus(err.message || 'Не удалось подготовить файлы.', 'error');
+      return;
+    }
     if (captchaToken) data.turnstileToken = captchaToken;
     sending = true;
     submit.disabled = true;
@@ -215,6 +222,7 @@
       const result = await response.json().catch(() => ({}));
       if (!response.ok || result.ok !== true) throw Error(result.error || `Ошибка отправки (HTTP ${response.status}).`);
       form.reset();
+      await window.ALLIAM_EXPERIENCE?.afterSent?.(result);
       setStatus(`Заявка №${result.id || '—'} доставлена в Telegram! Спасибо, с вами свяжутся по указанному контакту.`, 'success');
     } catch (err) {
       const msg = err.name === 'AbortError'

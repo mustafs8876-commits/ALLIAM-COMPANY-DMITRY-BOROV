@@ -1,0 +1,16 @@
+{
+  "name": "alliam-personal-website",
+  "version": "1.2.0",
+  "private": true,
+  "description": "ALLIAM: сайт с защищённой отправкой заявок в Telegram",
+  "scripts": {
+    "start": "npx vercel dev",
+    "test": "node --test tests/*.test.js",
+    "telegram:check": "node scripts/telegram-check.js",
+    "dev": "npx vercel dev",
+    "preview:static": "npx serve . -l 3000"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

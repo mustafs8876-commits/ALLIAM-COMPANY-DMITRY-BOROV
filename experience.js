@@ -50,7 +50,7 @@
     }
     const bytes=selected.reduce((sum,item)=>sum+item.blob.size,0);
     meter.textContent=selected.length+' из '+MAX_FILES+' файлов · '+filesize(bytes)+' из 2,9 МБ';
-    announce(selected.length?'Вложения будут отправлены специалисту вместе с заявкой.':'Фото и короткие видео. Большие видео можно дослать в Telegram-диалоге.');
+    announce(selected.length?'Вложения будут отправлены специалисту вместе с заявкой.':'Фото и короткие видео можно прикрепить здесь. Для больших файлов продолжите общение со специалистом после подачи заявки.');
   }
   async function normalizeImage(file){
     if(file.size<=650000)return {blob:file,mime:file.type,name:file.name};
@@ -76,12 +76,12 @@
         let mime=String(file.type||'').toLowerCase();
         if(!mime){const ext=file.name.split('.').pop().toLowerCase();mime={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',mp4:'video/mp4',webm:'video/webm',mov:'video/quicktime'}[ext]||'';}
         if(!types.has(mime)){announce('Поддерживаются JPG, PNG, WebP, MP4, WebM и MOV.',true);continue;}
-        if(mime.startsWith('video/')&&file.size>MAX_FILE){announce('Это видео слишком большое для веб-формы. Отправьте его через Telegram после подачи заявки.',true);continue;}
+        if(mime.startsWith('video/')&&file.size>MAX_FILE){announce('Видео слишком большое для этой формы. Вы можете подать заявку без него и передать файл отдельно.',true);continue;}
         let entry;
         try{entry=mime.startsWith('image/')?await normalizeImage(file):{blob:file,mime,name:file.name};}
         catch{announce('Не удалось обработать '+file.name+'. Попробуйте другое изображение.',true);continue;}
         const sum=selected.reduce((total,x)=>total+x.blob.size,0)+entry.blob.size;
-        if(entry.blob.size>MAX_FILE||sum>MAX_TOTAL){announce('Превышен лимит 2,9 МБ на все вложения. Удалите файл или пришлите большое видео через Telegram.',true);continue;}
+        if(entry.blob.size>MAX_FILE||sum>MAX_TOTAL){announce('Превышен лимит 2,9 МБ на вложения. Удалите часть файлов или передайте их отдельно после подачи заявки.',true);continue;}
         selected.push({...entry,url:URL.createObjectURL(entry.blob)});
       }
       render();
@@ -122,7 +122,7 @@
       successRef.textContent='№ '+String(result.id||'—');
       const sent=Number(result.filesSent||0),failed=Number(result.filesFailed||0);
       const notice=document.getElementById('files-delivery-result');
-      if(notice)notice.textContent=failed?('Заявка доставлена. Файлы: отправлено '+sent+', не доставлено '+failed+'. Повторите отправку недоставленных файлов через Telegram.'):sent?('Все '+sent+' вложения переданы специалисту.'):'Заявка передана специалисту.';
+      if(notice)notice.textContent=failed?('Заявка успешно отправлена. Файлы: получено '+sent+', не получено '+failed+'. Сохраните недоставленные файлы для отдельной передачи специалисту.'):sent?('Все '+sent+' вложения переданы специалисту.'):'Заявка передана специалисту.';
       if(chatLink){
         const href=String(result.chatLink||'');
         const trusted=/^https:\/\/t\.me\/[A-Za-z0-9_]{5,32}\?start=[A-F0-9]{12}_[A-Za-z0-9_-]{16}$/.test(href);

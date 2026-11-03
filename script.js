@@ -28,8 +28,6 @@
   const linkBox=qs('#contact-links');
   if(linkBox){
     const links=[];
-    const telegram=String(cfg.telegram||'').replace(/^@/,'').trim();
-    if(/^[a-zA-Z0-9_]{5,32}$/.test(telegram)) links.push(['Telegram',`https://t.me/${telegram}`]);
     const email=String(cfg.email||'').trim();
     if(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) links.push(['E-mail',`mailto:${email}`]);
     const phone=String(cfg.phone||'').trim();
@@ -134,7 +132,7 @@
     if (retryConnection) retryConnection.hidden = ready;
   }
   function explainUnavailable() {
-    if (location.protocol === 'file:') return 'Сайт открыт как файл на компьютере (file://). Автоматическая отправка доступна только на опубликованном сайте Vercel. Пока скопируйте заявку и отправьте её в Telegram.';
+    if (location.protocol === 'file:') return 'Для отправки заявки откройте опубликованную версию сайта. Здесь вы можете скопировать текст обращения.';
     if (['localhost', '127.0.0.1'].includes(location.hostname)) return 'Локальный сервер не запустил API. Для проверки откройте проект через vercel dev, а не через обычный просмотр HTML.';
     return 'Сервер /api/contact недоступен на этом адресе. Опубликуйте весь проект на Vercel вместе с папкой api/, затем повторите проверку.';
   }
@@ -157,14 +155,14 @@
       const data = await response.json();
       if (!response.ok) throw Error('status-' + response.status);
       if (data.ready !== true) {
-        setDeliveryReady(false, 'Сервер найден, но TELEGRAM_BOT_TOKEN не задан в настройках Vercel. Пока используйте ручную отправку в Telegram.');
+        setDeliveryReady(false, 'Приём заявок временно недоступен. Попробуйте позже или свяжитесь со специалистом напрямую.');
         return false;
       }
       if (data.captchaRequired && !cfg.turnstileSiteKey) {
         setDeliveryReady(false, 'Сервер требует Cloudflare Turnstile, но публичный ключ не настроен в config.js.');
         return false;
       }
-      setDeliveryReady(true, '✓ Сервер заявок подключён. После подтверждения Telegram заявка будет отмечена как доставленная.');
+      setDeliveryReady(true, '✓ Форма готова. После отправки вы получите номер обращения.');
       return true;
     } catch {
       setDeliveryReady(false, explainUnavailable());
@@ -180,7 +178,7 @@
     event.preventDefault();
     if (sending) return;
     if (!deliveryReady) {
-      setStatus('Автоматическая отправка не подключена. Скопируйте текст заявки и отправьте в Telegram, либо проверьте подключение сервера.', 'error');
+      setStatus('Приём заявок временно недоступен. Сохраните текст обращения или свяжитесь со специалистом напрямую.', 'error');
       return;
     }
     if (!form.reportValidity()) {
@@ -188,7 +186,7 @@
       return;
     }
     if (!validateContact(form.elements.contact.value)) {
-      setStatus('Укажите действительный контакт: e-mail, номер телефона или @Telegram.', 'error');
+      setStatus('Укажите действительный контакт: e-mail, номер телефона или @username.', 'error');
       form.elements.contact.focus(); return;
     }
     if (form.elements.website?.value) {
@@ -209,7 +207,7 @@
     sending = true;
     submit.disabled = true;
     submit.classList.add('loading');
-    setStatus('Передаём заявку в Telegram…');
+    setStatus('Отправляем заявку…');
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 22000);
     try {
@@ -218,12 +216,12 @@
         body:JSON.stringify(data), signal:controller.signal
       });
       const contentType = response.headers.get('content-type') || '';
-      if (!contentType.toLowerCase().includes('application/json')) throw Error('Сервер заявок не ответил корректно. Проверьте публикацию папки api/ на Vercel.');
+      if (!contentType.toLowerCase().includes('application/json')) throw Error('Не удалось обработать заявку. Попробуйте позднее.');
       const result = await response.json().catch(() => ({}));
       if (!response.ok || result.ok !== true) throw Error(result.error || `Ошибка отправки (HTTP ${response.status}).`);
       form.reset();
       await window.ALLIAM_EXPERIENCE?.afterSent?.(result);
-      setStatus(`Заявка №${result.id || '—'} доставлена в Telegram! Спасибо, с вами свяжутся по указанному контакту.`, 'success');
+      setStatus(`Заявка №${result.id || '—'} успешно отправлена! Спасибо за обращение. Мы свяжемся с вами по указанному контакту.`, 'success');
     } catch (err) {
       const msg = err.name === 'AbortError'
         ? 'Сервер не ответил вовремя; доставка не подтверждена.'

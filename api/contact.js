@@ -47,10 +47,10 @@ module.exports=async function handler(req,res){
   res.setHeader('X-Content-Type-Options','nosniff');
   if(req.method==='GET')return json(res,200,{ready:ready(),captchaRequired:!!process.env.TURNSTILE_SECRET_KEY,attachments:{maxFiles:MAX_FILES,maxFileBytes:MAX_SINGLE,maxTotalBytes:MAX_TOTAL},dialogSupported:!!process.env.TELEGRAM_WEBHOOK_SECRET});
   if(req.method!=='POST'){res.setHeader('Allow','GET, POST');return json(res,405,{error:'Метод не поддерживается.'});}
-  if(!ready())return json(res,503,{error:'Получение заявок временно недоступно. Используйте Telegram.'});
+  if(!ready())return json(res,503,{error:'Приём заявок временно недоступен. Попробуйте позднее или свяжитесь со специалистом напрямую.'});
   if(!requireSameOrigin(req))return json(res,403,{error:'Источник запроса не разрешён.'});
   if(!/^application\/json\b/i.test(trim(req.headers['content-type'])))return json(res,415,{error:'Ожидается JSON.'});
-  if(Number(req.headers['content-length']||0)>4100000)return json(res,413,{error:'Файлы слишком большие. Используйте Telegram для длинного видео.'});
+  if(Number(req.headers['content-length']||0)>4100000)return json(res,413,{error:'Файлы слишком большие. Уменьшите вложения или подайте заявку без них.'});
   const b=req.body&&typeof req.body==='object'&&!Array.isArray(req.body)?req.body:{};
   if(Object.keys(b).length>20)return json(res,400,{error:'Некорректная заявка.'});
   if(trim(b.website))return json(res,200,{ok:true});
@@ -80,7 +80,7 @@ module.exports=async function handler(req,res){
   if(/^\d+$/.test(String(process.env.TELEGRAM_THREAD_ID||'')))payload.message_thread_id=Number(process.env.TELEGRAM_THREAD_ID);
   if(user)payload.reply_markup={inline_keyboard:[[{text:'Открыть Telegram клиента',url:'https://t.me/'+user[1]}]]};
   try{const sent=await request('sendMessage',payload,10000);if(!sent?.message_id)throw Error('No delivery receipt');}
-  catch{return json(res,502,{error:'Telegram не подтвердил отправку заявки. Повторите попытку.'});}
+  catch{return json(res,502,{error:'Не удалось подтвердить получение заявки. Повторите попытку.'});}
   const results=await Promise.allSettled(media.map((item,i)=>upload(item.kind,item.buffer,item.filename,item.mime,'ALLIAM · '+id+' · '+(i+1)+'/'+media.length+' · '+item.filename)));
   const filesSent=results.filter(x=>x.status==='fulfilled').length;
   let chatLink='';
